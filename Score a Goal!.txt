@@ -1,0 +1,393 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "SLEEP HUB",
+   Icon = 121030902371363, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
+   LoadingTitle = "SLEEP HUB",
+   LoadingSubtitle = "by SLEEP HUB",
+   ShowText = "Rayfield", -- for mobile users to unhide rayfield, change if you'd like
+   Theme = "Dark Blue", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+
+   ToggleUIKeybind = "K", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
+
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil, -- Create a custom folder for your hub/game
+      FileName = "SLEEP HUB Hub"
+   },
+
+   Discord = {
+      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
+      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ ABCD would be ABCD
+      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+   },
+
+   KeySystem = true, -- Set this to true to use our key system
+   KeySettings = {
+      Title = "Untitled",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided", -- Use this to tell the user how to get a key
+      FileName = "SLEEP", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
+      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"SLEEP"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
+   }
+})
+
+local Tab = Window:CreateTab("ฟาร์มพลัง", 108085832401045)
+
+-- ตัวเลือกสำหรับโซนและเครื่องจักร
+local zoneOptions = {"โซน 1", "โซน 2", "โซน 3", "โซน 4", "โซน 5", "โซน 6", "โซน 7", "โซน 8", "โซน 9", "โซน 10", "โซน 11", "โซน 12"}
+local machineOptions = {"เครื่องจักร 1", "เครื่องจักร 2", "เครื่องจักร 3"}
+
+-- ตัวแปรเก็บค่าที่เลือก
+local selectedZoneIndex = 1
+local selectedMachineIndex = 1
+local isRunning = false
+local farmThread = nil
+
+-- Dropdown เลือกโซน
+local ZoneDropdown = Tab:CreateDropdown({
+    Name = "เลือกโซน",
+    Options = zoneOptions,
+    CurrentOption = {zoneOptions[selectedZoneIndex]},
+    MultipleOptions = false,
+    Flag = "DropdownZone",
+    Callback = function(option)
+        local chosen = type(option) == "table" and option[1] or option
+        local idx = table.find(zoneOptions, chosen) or 1
+        selectedZoneIndex = idx
+        print("เลือกโซน:", chosen, "index:", idx)
+    end,
+})
+
+-- Dropdown เลือกเครื่องจักร
+local MachineDropdown = Tab:CreateDropdown({
+    Name = "เลือกเครื่องจักร",
+    Options = machineOptions,
+    CurrentOption = {machineOptions[selectedMachineIndex]},
+    MultipleOptions = false,
+    Flag = "DropdownMachine",
+    Callback = function(option)
+        local chosen = type(option) == "table" and option[1] or option
+        local idx = table.find(machineOptions, chosen) or 1
+        selectedMachineIndex = idx
+        print("เลือกเครื่องจักร:", chosen, "index:", idx)
+    end,
+})
+
+-- Toggle ออโต้ฟาร์ม (ทำงานทุก 0.01 วินาที)
+local ToggleFarm = Tab:CreateToggle({
+    Name = "ออโต้ฟาร์ม",
+    CurrentValue = false,
+    Flag = "ToggleFarm",
+    Callback = function(Value)
+        -- ป้องกันการทำงานซ้ำ
+        if Value == isRunning then return end
+        
+        isRunning = Value
+        
+        if isRunning then
+            -- เริ่ม thread ใหม่
+            farmThread = task.spawn(function()
+                local event = game:GetService("ReplicatedStorage")
+                    :WaitForChild("Events")
+                    :WaitForChild("RequestServerAction")
+                
+                while isRunning do
+                    -- ส่งคำสั่งพร้อมค่าจาก dropdown ทั้งสอง (ใช้งานคู่กัน)
+                    local args = {
+                        "Gameplay",
+                        "Train",
+                        {selectedMachineIndex, selectedZoneIndex} -- ใช้ค่าทั้งสองพร้อมกัน
+                    }
+                    
+                    -- ป้องกัน error
+                    pcall(function()
+                        event:FireServer(unpack(args))
+                    end)
+                    
+                    -- ทำงานทุก 0.01 วินาที
+                    task.wait(0.01)
+                end
+                
+                farmThread = nil
+            end)
+            
+            Rayfield:Notify({
+                Title = "ฟาร์มเริ่มทำงาน",
+                Content = "ส่งคำสั่งทุก 0.01 วินาที",
+                Duration = 3
+            })
+        else
+            -- หยุด thread
+            if farmThread then
+                task.cancel(farmThread)
+                farmThread = nil
+            end
+            
+            Rayfield:Notify({
+                Title = "ฟาร์มหยุด",
+                Content = "หยุดส่งคำสั่งแล้ว",
+                Duration = 3
+            })
+        end
+    end,
+})
+
+
+local Tab = Window:CreateTab("ฟาร์มถ้วยรางวัล", 17791680358)
+
+-- ตัวแปรสถานะ
+local isAutoWinRunning = false
+local selectedWinIndex = 1
+local autoWinThread = nil
+
+-- Dropdown เลือก Win (1-16)
+local WinDropdown = Tab:CreateDropdown({
+    Name = "เลือก Win",
+    Options = {
+        "Win 1", "Win 2", "Win 3", "Win 4", "Win 5", "Win 6", "Win 7", "Win 8",
+        "Win 9", "Win 10", "Win 11", "Win 12"
+    },
+    CurrentOption = {"Win 1"},
+    MultipleOptions = false,
+    Flag = "DropdownWin",
+    Callback = function(option)
+        -- ดึงค่าตัวเลขจากข้อความ "Win X"
+        local chosen = type(option) == "table" and option[1] or option
+        local number = tonumber(chosen:match("%d+")) or 1
+        selectedWinIndex = number
+        print("เลือก:", chosen, "| Index:", selectedWinIndex)
+    end,
+})
+
+-- Toggle Auto Win ทำงานทุก 0.01 วินาที
+local ToggleAutoWin = Tab:CreateToggle({
+    Name = "Auto Win (0.01s)",
+    CurrentValue = false,
+    Flag = "ToggleAutoWin",
+    Callback = function(Value)
+        -- ป้องกัน state ซ้ำซ้อน
+        if Value == isAutoWinRunning then return end
+        isAutoWinRunning = Value
+        
+        if isAutoWinRunning then
+            -- เริ่ม thread ใหม่
+            autoWinThread = task.spawn(function()
+                local remote = game:GetService("ReplicatedStorage")
+                    :WaitForChild("Events")
+                    :WaitForChild("InvokeServerAction")
+                
+                while isAutoWinRunning do
+                    -- ใช้ค่าจาก dropdown + ค่า fixed
+                    local args = {
+                        "Gameplay",
+                        "Win",
+                        selectedWinIndex,  -- ค่าจาก dropdown
+                        239.29506874084473 -- ค่าคงที่
+                    }
+                    
+                    -- ป้องกัน error
+                    pcall(function()
+                        remote:InvokeServer(unpack(args))
+                    end)
+                    
+                    -- หน่วงเวลา 0.01 วินาที
+                    task.wait(0.01)
+                end
+                
+                autoWinThread = nil
+            end)
+            
+            -- แจ้งเตือนเริ่มทำงาน
+            Rayfield:Notify({
+                Title = "ระบบเริ่มทำงาน",
+                Content = "Auto Win ทุก 0.01 วินาที",
+                Duration = 3
+            })
+        else
+            -- หยุด thread
+            if autoWinThread then
+                task.cancel(autoWinThread)
+                autoWinThread = nil
+            end
+            
+            -- แจ้งเตือนหยุดทำงาน
+            Rayfield:Notify({
+                Title = "ระบบหยุด",
+                Content = "Auto Win ถูกปิดแล้ว",
+                Duration = 3
+            })
+        end
+    end,
+})
+
+local Tab = Window:CreateTab("ออโต้ Rebirth", 18348489422)
+
+
+ local isRunning = false
+local autoThread = nil
+
+local Toggle = Tab:CreateToggle({
+   Name = "ออโต้ Rebirth",
+   CurrentValue = false,
+   Flag = "Toggle1", 
+   Callback = function(Value)
+       -- ป้องกันการทำงานซ้ำซ้อน
+       if Value == isRunning then return end
+       isRunning = Value
+       
+       if isRunning then
+           -- เริ่ม loop อัตโนมัติ
+           autoThread = task.spawn(function()
+               local remote = game:GetService("ReplicatedStorage")
+                   :WaitForChild("Events")
+                   :WaitForChild("InvokeServerAction")
+               
+               while isRunning do
+                   local args = {
+                       "Rebirths",
+                       "Request"
+                   }
+                   
+                   -- ป้องกันเกมค้างถ้า server ไม่ response
+                   pcall(function()
+                       remote:InvokeServer(unpack(args))
+                   end)
+                   
+                   -- หน่วงเวลา 0.01 วินาที
+                   task.wait(0.01)
+               end
+               
+               autoThread = nil
+           end)
+           
+           -- แจ้งเตือนเริ่มทำงาน
+           Rayfield:Notify({
+               Title = "ระบบเริ่มทำงาน",
+               Content = "Auto Rebirth ทุก 0.01 วินาที",
+               Duration = 3
+           })
+       else
+           -- หยุด loop
+           if autoThread then
+               task.cancel(autoThread)
+               autoThread = nil
+           end
+           
+           -- แจ้งเตือนหยุดทำงาน
+           Rayfield:Notify({
+               Title = "ระบบหยุด",
+               Content = "Auto Rebirth ถูกปิดแล้ว",
+               Duration = 3
+           })
+       end
+   end,
+})
+
+
+local Tab = Window:CreateTab("ออโต้เปิดไข่", 4483362458)
+
+
+
+
+
+
+
+
+local Tab = Window:CreateTab("ตั้งค่าเพิ่มเติม", 4483362458)
+
+-- ตัวแปรเก็บค่าปัจจุบัน
+local currentSpeed = 16  -- ค่าเริ่มต้น WalkSpeed
+local currentJump = 50   -- ค่าเริ่มต้น JumpPower
+
+-- ฟังก์ชันอัพเดทความเร็วการวิ่ง
+local function updateSpeed(value)
+    currentSpeed = value
+    pcall(function()
+        local player = game.Players.LocalPlayer
+        local character = player.Character
+        if character then
+            local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = value
+            end
+        end
+    end)
+end
+
+-- ฟังก์ชันอัพเดทพลังกระโดด
+local function updateJump(value)
+    currentJump = value
+    pcall(function()
+        local player = game.Players.LocalPlayer
+        local character = player.Character
+        if character then
+            local humanoid = character:FindFirstChildWhichIsA("Humanoid")
+            if humanoid then
+                humanoid.JumpPower = value
+            end
+        end
+    end)
+end
+
+-- สไลเดอร์ปรับความเร็วการวิ่ง
+local SpeedSlider = Tab:CreateSlider({
+   Name = "ความเร็วการวิ่ง",
+   Range = {0, 200},
+   Increment = 1,
+   Suffix = " Studs/s",
+   CurrentValue = currentSpeed,
+   Flag = "WalkSpeedSlider",
+   Callback = updateSpeed,
+})
+
+-- สไลเดอร์ปรับพลังกระโดด
+local JumpSlider = Tab:CreateSlider({
+   Name = "พลังกระโดด",
+   Range = {0, 200},
+   Increment = 1,
+   Suffix = " Power",
+   CurrentValue = currentJump,
+   Flag = "JumpPowerSlider",
+   Callback = updateJump,
+})
+
+-- ปุ่มรีเซ็ตค่าเริ่มต้น
+local ResetButton = Tab:CreateButton({
+   Name = "รีเซ็ตค่าเริ่มต้น",
+   Callback = function()
+       updateSpeed(16)
+       updateJump(50)
+       SpeedSlider:SetValue(16)
+       JumpSlider:SetValue(50)
+       
+       Rayfield:Notify({
+           Title = "รีเซ็ตสำเร็จ",
+           Content = "ค่าความเร็วและพลังกระโดดถูกรีเซ็ตแล้ว",
+           Duration = 3
+       })
+   end,
+})
+
+-- อัพเดทค่าอัตโนมัติเมื่อตัวละครเปลี่ยน
+local player = game.Players.LocalPlayer
+if player then
+    local function onCharacterAdded(character)
+        task.wait(0.5) -- รอให้ character โหลดเสร็จ
+        updateSpeed(currentSpeed)
+        updateJump(currentJump)
+    end
+    
+    player.CharacterAdded:Connect(onCharacterAdded)
+    
+    if player.Character then
+        onCharacterAdded(player.Character)
+    end
+end
+
+Rayfield:LoadConfiguration()

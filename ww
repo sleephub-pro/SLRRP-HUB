@@ -123,27 +123,23 @@ local Toggle = Tab:Toggle({
 
 
 
--- ตัวแปรสำหรับเก็บจำนวนที่ต้องการ (เริ่มต้นเป็น 1)
-local desiredAmount = 1
-
--- สร้าง Textbox สำหรับใส่จำนวน
+-- สร้าง Textbox สำหรับใส่จำนวนก่อน
 local AmountTextbox = Tab:Textbox({
     Title = "จำนวน Potions",
-    Desc = "ใส่จำนวนที่ต้องการ (ค่าเริ่มต้น: 1)",
-    Icon = "potion",
-    Value = "1",
+    Desc = "ใส่จำนวนที่ต้องการรับ (ตัวเลข)",
+    Icon = "plus",
+    Value = "1", -- ค่าเริ่มต้นเป็น 1
     Callback = function(value)
-        -- แปลงค่าจาก string เป็น number
+        -- ตรวจสอบค่าที่ใส่
         local num = tonumber(value)
-        if num and num > 0 then
-            desiredAmount = math.floor(num) -- เก็บเฉพาะจำนวนเต็มบวก
-        else
-            desiredAmount = 1 -- ค่าเริ่มต้นถ้าใส่ไม่ถูกต้อง
+        if not num or num < 1 then
+            warn("กรุณาใส่ตัวเลขที่มากกว่า 0")
+            AmountTextbox:SetValue("1") -- ตั้งกลับเป็น 1 ถ้าค่าผิด
         end
     end
 })
 
--- สร้าง Toggle ที่ใช้จำนวนจากกล่องข้อความ
+-- สร้าง Toggle สำหรับรับ Potions
 local Toggle = Tab:Toggle({
     Title = "รับ Potions",
     Desc = "คลิกเพื่อรับ potions ตามจำนวนที่ตั้งไว้",
@@ -151,7 +147,16 @@ local Toggle = Tab:Toggle({
     Type = "Checkbox",
     Value = false,
     Callback = function(state)
-        if state then -- ทำงานเมื่อเปิด Toggle
+        if state then -- เมื่อเปิด Toggle
+            -- ดึงค่าจำนวนจาก Textbox
+            local desiredAmount = tonumber(AmountTextbox.Value) or 1
+            
+            -- ตรวจสอบให้แน่ใจว่าค่าไม่ต่ำกว่า 1
+            if desiredAmount < 1 then
+                desiredAmount = 1
+                warn("จำนวนถูกตั้งเป็น 1 เพราะค่าที่ใส่ไม่ถูกต้อง")
+            end
+            
             -- รายชื่อ Potion ทั้งหมด
             local potionIDs = {"BodyPotion", "LegPotion", "ArmPotion"}
             
@@ -169,7 +174,7 @@ local Toggle = Tab:Toggle({
                 local claimRE = game:GetService("ReplicatedStorage"):WaitForChild("E&F"):WaitForChild("Reward"):WaitForChild("ClaimRewardRE")
                 claimRE:FireServer(unpack(args))
                 
-                -- หน่วงเวลาเล็กน้อยเพื่อป้องกัน rate limit (ถ้าจำเป็น)
+                -- หน่วงเวลาเล็กน้อยเพื่อป้องกัน rate limit
                 wait(0.1)
             end
             

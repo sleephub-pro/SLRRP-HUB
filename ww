@@ -122,60 +122,7 @@ local Toggle = Tab:Toggle({
 
 
 
--- สร้างกล่องข้อความสำหรับใส่จำนวนก่อน
-local Textbox = Tab:Textbox({
-    Title = "จำนวน Potions",
-    Desc = "ใส่จำนวนที่ต้องการรับ",
-    Icon = "plus",
-    Value = "1", -- ค่าเริ่มต้น
-    Placeholder = "ตัวเลข",
-    Callback = function(value)
-        -- ตรวจสอบว่าค่าเป็นตัวเลข
-        desiredAmount = tonumber(value) or 1
-        if desiredAmount < 1 then
-            desiredAmount = 1
-        end
-    end
-})
 
--- ตัวแปรสำหรับเก็บจำนวนที่ต้องการ (เริ่มต้นเป็น 1)
-local desiredAmount = 1
-
--- สร้าง Toggle ที่ใช้จำนวนจากกล่องข้อความ
-local Toggle = Tab:Toggle({
-    Title = "รับ Potions",
-    Desc = "คลิกเพื่อรับ potions ตามจำนวนที่ตั้งไว้",
-    Icon = "bird",
-    Type = "Checkbox",
-    Value = false,
-    Callback = function(state)
-        if state then -- ทำงานเมื่อเปิด Toggle
-            -- รายชื่อ Potion ทั้งหมด
-            local potionIDs = {"BodyPotion", "LegPotion", "ArmPotion"}
-            
-            -- ส่ง request สำหรับแต่ละประเภท
-            for _, potionID in ipairs(potionIDs) do
-                local args = {
-                    {
-                        Number = desiredAmount, -- ใช้จำนวนจาก Textbox
-                        Type = "Potion",
-                        ID = potionID
-                    }
-                }
-                
-                -- Fire RemoteEvent
-                local claimRE = game:GetService("ReplicatedStorage"):WaitForChild("E&F"):WaitForChild("Reward"):WaitForChild("ClaimRewardRE")
-                claimRE:FireServer(unpack(args))
-                
-                -- หน่วงเวลาเล็กน้อยเพื่อป้องกัน rate limit (ถ้าจำเป็น)
-                wait(0.1)
-            end
-            
-            -- ปิด Toggle อัตโนมัติหลังทำงานเสร็จ
-            Toggle:SetValue(false)
-        end
-    end
-})
 
 
 

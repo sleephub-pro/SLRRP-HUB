@@ -134,7 +134,7 @@ local function RunV1()
             ReplicatedStorage.Remotes.TeleportToPortal:FireServer(portal.name)
             wait(0.5)
             TeleportAndFloat(portal.pos)
-            wait(0.2)
+            wait(0.3)
             UseSelectedSkill()
             wait(0.1)
         end

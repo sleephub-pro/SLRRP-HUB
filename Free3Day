@@ -132,15 +132,15 @@ local function RunV1()
             EquipSelectedWeapon()
             RemoveIslands()
             ReplicatedStorage.Remotes.TeleportToPortal:FireServer(portal.name)
-            wait(0.5)
-            TeleportAndFloat(portal.pos)
             wait(0.3)
+            TeleportAndFloat(portal.pos)
+            wait(0.2)
             UseSelectedSkill()
             wait(0.1)
         end
 
         print("✅ ครบ 1 รอบ V1 | รอรอบใหม่")
-        wait(0.5)
+        wait(0.1)
     end
 end
 
